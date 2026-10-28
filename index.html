@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fault Line</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ground: #151412; --panel: #1d1b18; --btn: #1f1d1a; --line: #2c2925; --line2: #3a3631; --line3: #4a453e;
+    --text: #ece8e1; --text2: #d9d4cb; --muted: #9d978d; --muted2: #b5afa5; --dim: #6b655c; --ember: #e0662f;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; background: var(--ground); }
+  body { min-height: 100vh; min-height: 100dvh; overflow-x: hidden; overscroll-behavior: none; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: var(--text); }
+  button { cursor: pointer; font-family: inherit; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  button:hover { filter: brightness(1.15); }
+  button:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+
+  #stage { position: relative; width: 100%; max-width: 1280px; padding: 16px; display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: 16px 56px; }
+  #bgcracks { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; }
+
+  #hud { position: relative; z-index: 1; width: 180px; display: flex; flex-direction: column; gap: 22px; transform-origin: 50% 0%; }
+  .big { font-size: 40px; font-weight: 500; line-height: 1; }
+  .bonus { font-size: 30px; font-weight: 500; line-height: 1; }
+  .stat { display: flex; flex-direction: column; gap: 4px; }
+  #next { width: 132px; height: 132px; padding: 18px; background: var(--panel); border: 1px solid var(--line); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; }
+  #next div { width: 22px; height: 22px; }
+  .pill { align-self: flex-start; height: 44px; padding: 0 16px 0 12px; border-radius: 22px; border: 1px solid var(--line3); background: var(--btn); color: var(--text); display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; }
+
+  #colWrap { position: relative; z-index: 1; flex: none; width: 360px; height: 730px; }
+  #col { width: 360px; height: 730px; display: flex; flex-direction: column; align-items: center; transform-origin: 0 0; }
+  #well { width: 316px; height: 600px; position: relative; transform-origin: 50% 100%; }
+  .wallseg { position: absolute; width: 8px; height: 59px; }
+  #grid { position: absolute; left: 8px; top: 0; width: 300px; height: 600px; display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); grid-auto-rows: 30px; }
+  .cell { width: 30px; height: 30px; }
+  #dust { position: absolute; left: 8px; top: 0; width: 300px; height: 600px; pointer-events: none; }
+  #dust div { position: absolute; border-radius: 50%; background: #c9bfb0; }
+  .zone { position: absolute; left: 320px; display: flex; align-items: center; gap: 3px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; }
+  .zone span { width: 5px; height: 1px; background: currentColor; }
+  #flash { position: absolute; left: 8px; top: 210px; width: 300px; text-align: center; pointer-events: none; font-family: 'IBM Plex Mono', monospace; font-size: 30px; font-weight: 500; color: #f08a5d; }
+  .wellOverlay { position: absolute; left: 8px; top: 0; width: 300px; height: 600px; display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center; background: rgba(21, 20, 18, 0.75); }
+  #over { position: absolute; inset: 0; padding: 36px 30px; display: flex; flex-direction: column; justify-content: center; gap: 22px; background: rgba(21, 20, 18, 0.94); }
+  #topScores div { display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 15px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  .primary { height: 50px; padding: 0 36px; border-radius: 4px; border: none; background: var(--ember); color: #1a0f08; font-size: 16px; font-weight: 600; }
+
+  #floor { width: 360px; height: 16px; display: flex; }
+  #floor div { height: 16px; background: var(--line2); border-top: 2px solid var(--line3); }
+
+  #controls { margin-top: 22px; display: flex; gap: 6px; }
+  .ctl { width: 54px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .ctl button { width: 52px; height: 52px; border-radius: 6px; border: 1px solid var(--line2); background: var(--btn); color: var(--text); display: flex; align-items: center; justify-content: center; padding: 0; }
+  .ctl .name { font-size: 12px; font-weight: 500; color: var(--text2); }
+  .key { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted2); border: 1px solid var(--line3); border-radius: 3px; padding: 1px 6px; }
+  svg.icon { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  #research { position: relative; z-index: 1; width: 320px; height: 730px; min-height: 420px; padding: 22px; background: var(--panel); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 18px; }
+  #trace { height: 80px; display: flex; align-items: flex-end; gap: 1px; border-bottom: 1px solid var(--line2); }
+  #trace div { width: 4px; }
+  .rgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; font-size: 13px; }
+  .rgrid div { display: flex; flex-direction: column; gap: 2px; }
+  .rgrid span:first-child { color: var(--muted); }
+  .rgrid span:last-child { font-family: 'IBM Plex Mono', monospace; font-size: 17px; }
+  #games { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+  .game { display: flex; flex-direction: column; gap: 3px; padding: 9px 12px; background: #24221f; border-radius: 4px; }
+
+  #guide { position: fixed; inset: 0; z-index: 5; overflow-y: auto; padding: 16px; display: flex; background: rgba(21, 20, 18, 0.92); }
+  #guide .card { position: relative; margin: auto; width: 100%; max-width: 600px; padding: clamp(24px, 5vw, 44px) clamp(20px, 5vw, 48px); background: var(--panel); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 22px; }
+  #guide h1 { font-size: clamp(24px, 6vw, 30px) !important; }
+
+  /* Phones and narrow windows: score strip on top, well and buttons below */
+  @media (max-width: 899px) {
+    #stage { flex-direction: column; align-items: center; gap: 12px; padding: 12px; }
+    #hud { width: 100%; max-width: 560px; flex-direction: row; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px 16px; transform-origin: 50% 50%; }
+    .big { font-size: 28px; }
+    .bonus { font-size: 22px; }
+    #hud .label { font-size: 10px; }
+    #next { width: 64px; height: 64px; padding: 7px; gap: 1px; }
+    #next div { width: 11px; height: 11px; }
+    #time { display: none; }
+    #helpBtn { height: 40px; font-size: 13px; }
+    #research { width: 100%; max-width: 560px; height: auto !important; }
+    #games { max-height: 320px; }
+    #guide .card .keys { grid-template-columns: 1fr; }
+    #guide .card ol { font-size: 15px; }
+  }
+  #guide ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 10px; font-size: 16px; line-height: 1.5; color: var(--text2); }
+  .keys { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 24px; font-size: 14px; color: var(--text2); }
+  .keys div { display: flex; align-items: center; gap: 12px; }
+  .keys span { min-width: 64px; padding: 4px 8px; text-align: center; border: 1px solid var(--line3); border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--text); }
+  #closeX { position: absolute; top: 14px; right: 14px; width: 44px; height: 44px; border-radius: 22px; border: none; background: transparent; color: var(--muted2); display: flex; align-items: center; justify-content: center; padding: 0; }
+</style>
+</head>
+<body>
+<div id="stage" aria-label="Game area">
+  <svg id="bgcracks" viewBox="0 0 1280 820" preserveAspectRatio="xMidYMid slice" fill="none" stroke="#5a5148" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true">
+    <path d="M150 0 L186 92 L164 150 L222 244 L204 332 L258 424 L236 500"/><path d="M186 92 L230 110"/>
+    <path d="M1280 506 L1192 552 L1156 636 L1082 688 L1046 820"/><path d="M1156 636 L1210 676"/>
+    <path d="M0 704 L92 684 L132 724 L236 708 L270 742"/><path d="M760 0 L742 54 L776 102 L758 160"/>
+  </svg>
+
+  <div id="hud">
+    <div class="stat" style="gap: 6px">
+      <div class="label">Score</div>
+      <div id="score" class="mono big">0</div>
+      <div id="best" class="mono" style="font-size: 13px; color: var(--muted)">Best 0</div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+      <div class="stat"><div class="label">Level</div><div id="level" class="mono" style="font-size: 22px; font-weight: 500">1</div></div>
+      <div class="stat"><div class="label">Lines</div><div id="lines" class="mono" style="font-size: 22px; font-weight: 500">0</div></div>
+    </div>
+    <div class="stat">
+      <div class="label">Height bonus</div>
+      <div id="mult" class="mono bonus">×1</div>
+    </div>
+    <div class="stat" style="gap: 8px">
+      <div class="label">Next</div>
+      <div id="next"></div>
+    </div>
+    <div id="time" class="mono" style="font-size: 14px; letter-spacing: 0.08em; color: var(--muted)">00:00</div>
+    <button id="helpBtn" class="pill" type="button">
+      <svg class="icon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="stroke-width: 1.8"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8 1c0 1.7-2.4 2.2-2.4 3.7"/><path d="M12 17.2h.01"/></svg>
+      How to play
+    </button>
+  </div>
+
+  <div id="colWrap"><div id="col">
+    <div id="well">
+      <div id="walls"></div>
+      <div id="grid"></div>
+      <div id="dust"></div>
+      <div class="zone" id="z4" style="top: 112px"><span></span>×4</div>
+      <div class="zone" id="z3" style="top: 232px"><span></span>×3</div>
+      <div class="zone" id="z2" style="top: 352px"><span></span>×2</div>
+      <div id="flash" hidden></div>
+      <div id="paused" class="wellOverlay" hidden>
+        <svg class="icon" width="40" height="40" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--muted)"><path d="M9 5v14M15 5v14"/></svg>
+        <div style="font-size: 14px; color: var(--muted2)">Paused · press P to resume</div>
+      </div>
+      <div id="over" hidden>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div class="label">Final score</div>
+          <div id="finalScore" class="mono" style="font-size: 46px; font-weight: 500; line-height: 1">0</div>
+          <div id="newBest" hidden style="align-self: flex-start; margin-top: 6px; padding: 3px 10px; border-radius: 12px; background: var(--ember); color: #1a0f08; font-size: 12px; font-weight: 600">New best</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <div class="label">Top scores</div>
+          <div id="topScores" style="display: flex; flex-direction: column; gap: 8px"></div>
+        </div>
+        <button id="againBtn" class="primary" type="button">Play again</button>
+      </div>
+    </div>
+
+    <div id="floor">
+      <div id="fL" style="flex: 13 1 0; transform-origin: 100% 0%"></div>
+      <div id="fM" style="flex: 11 1 0"></div>
+      <div id="fR" style="flex: 12 1 0; transform-origin: 0% 0%"></div>
+    </div>
+
+    <div id="controls">
+      <div class="ctl"><button id="bLeft" type="button" aria-label="Move left (Left arrow key)"><svg class="icon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button><div class="name">Left</div><div class="key">←</div></div>
+      <div class="ctl"><button id="bTurn" type="button" aria-label="Turn (Up arrow key)"><svg class="icon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5v4.5H15"/></svg></button><div class="name">Turn</div><div class="key">↑</div></div>
+      <div class="ctl"><button id="bRight" type="button" aria-label="Move right (Right arrow key)"><svg class="icon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button><div class="name">Right</div><div class="key">→</div></div>
+      <div class="ctl"><button id="bDown" type="button" aria-label="Move down (Down arrow key)"><svg class="icon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="name">Down</div><div class="key">↓</div></div>
+      <div class="ctl"><button id="bDrop" type="button" aria-label="Drop (Space bar)"><svg class="icon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg></button><div class="name">Drop</div><div class="key">Space</div></div>
+      <div class="ctl"><button id="bPause" type="button" aria-label="Pause or resume (P key)">
+        <svg id="icPlay" class="icon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M8 5l11 7-11 7z"/></svg>
+        <svg id="icPause" class="icon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg>
+      </button><div class="name">Pause</div><div class="key">P</div></div>
+    </div>
+  </div></div>
+
+  <div id="research" hidden>
+    <div style="display: flex; justify-content: space-between; align-items: baseline">
+      <div class="mono" style="font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted)">Researcher view</div>
+      <div id="condLabel" class="mono" style="font-size: 12px; color: var(--ember)">instability</div>
+    </div>
+    <div class="stat">
+      <div style="font-size: 13px; color: var(--muted)">Instability index</div>
+      <div id="instPct" class="mono" style="font-size: 44px; font-weight: 500; line-height: 1">0%</div>
+    </div>
+    <div id="trace"></div>
+    <div class="rgrid">
+      <div><span>Tower height</span><span id="rHeight">0%</span></div>
+      <div><span>Peak height</span><span id="rPeak">0%</span></div>
+      <div><span>Tremors</span><span id="rTremors">0</span></div>
+      <div><span>Ended by</span><span id="rEnding">—</span></div>
+    </div>
+    <div style="font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px">Games this session</div>
+    <div id="games"><div style="font-size: 13px; color: var(--muted)">None yet.</div></div>
+  </div>
+
+  <div id="guide">
+    <div class="card">
+      <button id="closeX" type="button" aria-label="Close instructions" hidden><svg class="icon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div class="mono" style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted)">Instructions</div>
+        <h1 style="margin: 0; font-size: 30px; line-height: 1.2; font-weight: 600">How to play</h1>
+      </div>
+      <ol>
+        <li>Blocks fall into the well one at a time.</li>
+        <li>Move and turn each block to fit it in place. Fill a whole row to clear it and score points.</li>
+        <li>The taller your stack, the more every block and row is worth, up to ×4. Watch the marks on the right of the well.</li>
+        <li>The game ends when the blocks reach the top.</li>
+      </ol>
+      <div class="keys">
+        <div><span>← →</span>Move left / right</div>
+        <div><span>↑</span>Turn</div>
+        <div><span>↓</span>Move down faster</div>
+        <div><span>Space</span>Drop instantly</div>
+        <div><span>P</span>Pause</div>
+        <div><span>H</span>This page</div>
+      </div>
+      <div style="font-size: 14px; line-height: 1.5; color: var(--muted2)">Points: 100 / 300 / 500 / 800 for clearing 1 / 2 / 3 / 4 rows at once, times your level and height bonus. Dropping blocks fast earns a little extra.</div>
+      <button id="beginBtn" class="primary" type="button" style="align-self: flex-start">Begin</button>
+      <button id="resumeBtn" class="primary" type="button" style="align-self: flex-start" hidden>Back to game</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- Settings (change with the page address, e.g. ?condition=control&researcher=1) ----------
+  var params = new URLSearchParams(location.search);
+  function flag(name, def) { var v = params.get(name); if (v === null) return def; return !(v === '0' || v === 'false' || v === 'off'); }
+  var CONFIG = {
+    condition: params.get('condition') === 'control' ? 'control' : 'instability',
+    researcher: flag('researcher', false),
+    startSpeed: Math.max(250, Math.min(1200, parseInt(params.get('speed') || '750', 10) || 750)),
+    environment: flag('environment', true),
+    lean: flag('lean', true),
+    tremble: flag('tremble', true),
+    cracks: flag('cracks', true),
+    glow: flag('glow', true),
+    collapse: flag('collapse', true)
+  };
+
+  var COLS = 10, ROWS = 20;
+  var SHAPES = {
+    I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+    O: [[1,1],[1,1]],
+    T: [[0,1,0],[1,1,1],[0,0,0]],
+    S: [[0,1,1],[1,1,0],[0,0,0]],
+    Z: [[1,1,0],[0,1,1],[0,0,0]],
+    J: [[1,0,0],[1,1,1],[0,0,0]],
+    L: [[0,0,1],[1,1,1],[0,0,0]]
+  };
+  var TYPES = ['I','O','T','S','Z','J','L'];
+  var LIGHT = { I: 80, O: 69, T: 61, S: 74, Z: 65, J: 56, L: 85 };
+  var TEETER_MS = 1200, FALL_MS = 1900, FLASH_MS = 1000;
+  var LINE_PTS = [0, 100, 300, 500, 800];
+  var EMBER = '#e0662f';
+
+  function emptyGrid() { var g = []; for (var y = 0; y < ROWS; y++) { var r = []; for (var x = 0; x < COLS; x++) r.push(null); g.push(r); } return g; }
+  function rotate(m) { var n = m.length, r = []; for (var y = 0; y < n; y++) { r.push([]); for (var x = 0; x < n; x++) r[y].push(m[n - 1 - x][y]); } return r; }
+  function clamp(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
+  function fmtTime(ms) { var s = Math.floor(ms / 1000), m = Math.floor(s / 60); s = s % 60; return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s; }
+  function fmtNum(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+  function multFor(H) { return H >= 0.8 ? 4 : (H >= 0.6 ? 3 : (H >= 0.4 ? 2 : 1)); }
+  function rand(a) { return (Math.random() - 0.5) * 2 * a; }
+
+  function cues() {
+    var on = CONFIG.condition === 'instability';
+    return { on: on, env: on && CONFIG.environment, lean: on && CONFIG.lean, tremble: on && CONFIG.tremble,
+             cracks: on && CONFIG.cracks, glow: on && CONFIG.glow, collapse: on && CONFIG.collapse };
+  }
+
+  // ---------- State ----------
+  var bag = [], games = [], helpOpen = false, helpPaused = false, best = 0;
+  try { var sb = parseInt(localStorage.getItem('faultline-best') || '0', 10); if (sb > 0) best = sb; } catch (e) {}
+  var ws = []; for (var w = 0; w < 20; w++) ws.push({ a: Math.random(), b: Math.random(), c: Math.random() });
+
+  function randType() {
+    if (!bag.length) {
+      bag = TYPES.slice();
+      for (var i = bag.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = bag[i]; bag[i] = bag[j]; bag[j] = t; }
+    }
+    return bag.pop();
+  }
+  function blankGame(phase) {
+    var S = []; for (var y = 0; y < ROWS; y++) S.push(new Array(COLS).fill(0));
+    return { grid: emptyGrid(), S: S, piece: null, next: randType(), phase: phase, paused: false,
+      acc: 0, elapsed: 0, lines: 0, level: 1, score: 0, peak: 0, peakH: 0, inst: 0, imb: 0, H: 0,
+      lean: 0, shx: 0, shy: 0, trace: [], traceAcc: 0, teeterT: 0, teeterDir: 1, fallT: 0, ending: null,
+      flash: null, tremor: null, nextTremor: 5000, tremors: 0, dust: [], dustAcc: 0, recId: null, newBest: false, overBuilt: false };
+  }
+  var g = blankGame('idle');
+
+  function collides(m, px, py) {
+    for (var cy = 0; cy < m.length; cy++) for (var cx = 0; cx < m[cy].length; cx++) {
+      if (!m[cy][cx]) continue;
+      var gx = px + cx, gy = py + cy;
+      if (gx < 0 || gx >= COLS || gy >= ROWS) return true;
+      if (gy >= 0 && g.grid[gy][gx]) return true;
+    }
+    return false;
+  }
+
+  function start() { g = blankGame('play'); helpOpen = false; helpPaused = false; measure(); spawn(); }
+
+  function spawn() {
+    var k = g.next; g.next = randType();
+    var m = SHAPES[k].map(function (r) { return r.slice(); });
+    var x = Math.floor((COLS - m.length) / 2), y = k === 'I' ? -1 : 0;
+    g.piece = { k: k, m: m, x: x, y: y };
+    if (collides(m, x, y)) { g.piece = null; endGame(); }
+  }
+
+  function stepDown() { var p = g.piece; if (!p) return; if (!collides(p.m, p.x, p.y + 1)) p.y++; else lock(); }
+
+  function lock() {
+    var p = g.piece, over = false; if (!p) return;
+    for (var cy = 0; cy < p.m.length; cy++) for (var cx = 0; cx < p.m[cy].length; cx++) {
+      if (!p.m[cy][cx]) continue;
+      var gy = p.y + cy, gx = p.x + cx;
+      if (gy < 0) { over = true; continue; }
+      g.grid[gy][gx] = { k: p.k, seed: Math.random(), seed2: Math.random() };
+    }
+    g.piece = null;
+    measure();
+    var mult = multFor(g.H);
+    g.score += 5 * mult;
+    var n = clearLines();
+    if (n > 0) {
+      var pts = LINE_PTS[n] * g.level * mult;
+      g.score += pts;
+      g.level = 1 + Math.floor(g.lines / 8);
+      g.flash = { text: '+' + fmtNum(pts) + (mult > 1 ? ' ×' + mult : ''), t: 0 };
+    }
+    measure();
+    if (over) { endGame(); return; }
+    // Taller tower = higher chance it topples. No risk below 60% of the well.
+    if (cues().collapse && g.H > 0.6) {
+      var r = (g.H - 0.6) / 0.4;
+      if (Math.random() < r * r * 0.35) { g.phase = 'teeter'; g.teeterT = 0; g.teeterDir = g.imb >= 0 ? 1 : -1; return; }
+    }
+    spawn();
+  }
+
+  function clearLines() {
+    var kept = g.grid.filter(function (r) { return r.some(function (c) { return !c; }); });
+    var n = ROWS - kept.length;
+    if (n > 0) { while (kept.length < ROWS) kept.unshift(new Array(COLS).fill(null)); g.grid = kept; g.lines += n; }
+    return n;
+  }
+
+  function measure() {
+    var S = [], n = 0, mx = 0, top = ROWS, holes = 0;
+    for (var y = 0; y < ROWS; y++) S.push(new Array(COLS).fill(0));
+    for (var y0 = 0; y0 < ROWS && top === ROWS; y0++) for (var x0 = 0; x0 < COLS; x0++) if (g.grid[y0][x0]) { top = y0; break; }
+    var H = top < ROWS ? (ROWS - top) / ROWS : 0;
+    var Hf = clamp((H - 0.4) / 0.6);
+    for (var x = 0; x < COLS; x++) {
+      var above = 0;
+      for (var y3 = 0; y3 < ROWS; y3++) {
+        if (!g.grid[y3][x]) continue;
+        var gap = y3 < ROWS - 1 && !g.grid[y3 + 1][x];
+        if (gap) holes++;
+        S[y3][x] = clamp(Hf * (0.35 + 0.65 * clamp(above / 8)) + (gap ? 0.15 * Hf : 0));
+        n++; mx += x + 0.5; above++;
+      }
+    }
+    g.S = S; g.H = H;
+    g.imb = n ? ((mx / n) - COLS / 2) / (COLS / 2) : 0;
+    g.inst = clamp(Math.pow(H, 1.5) * (0.9 + 0.1 * clamp(holes / 10) + 0.15 * Math.abs(g.imb)));
+    if (g.inst > g.peak) g.peak = g.inst;
+    if (H > g.peakH) g.peakH = H;
+  }
+
+  function endGame() {
+    if (g.phase === 'falling' || g.phase === 'over') return;
+    if (!g.ending) g.ending = 'reached top';
+    g.piece = null; g.phase = 'falling'; g.fallT = 0; g.tremor = null;
+    var rec = { id: Date.now() + '-' + Math.random().toString(36).slice(2, 6), score: g.score, ending: g.ending,
+                peakH: g.peakH, time: g.elapsed, lines: g.lines, cond: cues().on ? 'instability' : 'control' };
+    games.unshift(rec); g.recId = rec.id;
+    if (g.score > best) { best = g.score; g.newBest = g.score > 0; try { localStorage.setItem('faultline-best', String(best)); } catch (e) {} }
+    buildGames();
+  }
+
+  function spawnDust(fromTop) {
+    var x = Math.random() * 300, y = 0;
+    if (!fromTop) {
+      var col = Math.floor(Math.random() * COLS), row = -1;
+      for (var yy = 0; yy < ROWS; yy++) if (g.grid[yy][col]) { row = yy; break; }
+      if (row >= 0) { x = col * 30 + Math.random() * 30; y = row * 30 + Math.random() * 6; }
+    }
+    var life = 900 + Math.random() * 900;
+    g.dust.push({ x: x, y: y, vy: 0.25 + Math.random() * 0.5, s: 1.5 + Math.random() * 2, life: life, max: life });
+  }
+
+  // ---------- Input ----------
+  function canAct() { return g.phase === 'play' && !g.paused && g.piece; }
+  function move(dx) { if (canAct() && !collides(g.piece.m, g.piece.x + dx, g.piece.y)) g.piece.x += dx; }
+  function turn() {
+    if (!canAct()) return;
+    var p = g.piece, m = rotate(p.m), kicks = [0, -1, 1, -2, 2];
+    for (var i = 0; i < kicks.length; i++) if (!collides(m, p.x + kicks[i], p.y)) { p.m = m; p.x += kicks[i]; return; }
+  }
+  function soft() {
+    if (!canAct()) return;
+    var p = g.piece;
+    if (!collides(p.m, p.x, p.y + 1)) { p.y++; g.acc = 0; g.score += 1; } else lock();
+  }
+  function hard() {
+    if (!canAct()) return;
+    var p = g.piece, n = 0;
+    while (!collides(p.m, p.x, p.y + 1)) { p.y++; n++; }
+    g.score += 2 * n; lock();
+  }
+  function togglePause() { if (g.phase === 'play') { g.paused = !g.paused; helpPaused = false; } }
+  function openHelp() { if (g.phase === 'play' && !g.paused) { g.paused = true; helpPaused = true; } helpOpen = true; }
+  function closeHelp() { helpOpen = false; if (helpPaused && g.phase === 'play') g.paused = false; helpPaused = false; }
+
+  window.addEventListener('keydown', function (e) {
+    var k = e.key;
+    if (helpOpen) { if (k === 'Escape' || k === 'Enter' || k === 'h' || k === 'H') { e.preventDefault(); closeHelp(); render(); } return; }
+    if (k === 'h' || k === 'H') { e.preventDefault(); openHelp(); render(); return; }
+    if (g.phase === 'idle' || g.phase === 'over') {
+      if (k === 'Enter' || (g.phase === 'idle' && k === ' ')) { e.preventDefault(); start(); render(); }
+      return;
+    }
+    if (g.phase !== 'play') return;
+    var map = { ArrowLeft: 1, ArrowRight: 1, ArrowUp: 1, ArrowDown: 1, ' ': 1, x: 1, X: 1, p: 1, P: 1 };
+    if (!map[k]) return;
+    e.preventDefault();
+    if (k === 'p' || k === 'P') togglePause();
+    else if (k === 'ArrowLeft') move(-1);
+    else if (k === 'ArrowRight') move(1);
+    else if (k === 'ArrowUp' || k === 'x' || k === 'X') turn();
+    else if (k === 'ArrowDown') soft();
+    else if (k === ' ') hard();
+    render();
+  });
+  document.addEventListener('visibilitychange', function () { if (document.hidden && g.phase === 'play' && !g.paused) { g.paused = true; render(); } });
+
+  function $(id) { return document.getElementById(id); }
+  function bind(id, fn) { $(id).addEventListener('click', function (e) { fn(); e.currentTarget.blur(); render(); }); }
+  bind('bLeft', function () { move(-1); });
+  bind('bRight', function () { move(1); });
+  bind('bTurn', turn);
+  bind('bDown', soft);
+  bind('bDrop', hard);
+  bind('bPause', togglePause);
+  bind('helpBtn', openHelp);
+  bind('closeX', closeHelp);
+  bind('resumeBtn', closeHelp);
+  bind('beginBtn', start);
+  bind('againBtn', start);
+
+  // ---------- Build the board once ----------
+  function set(el, prop, val) { el._c = el._c || {}; if (el._c[prop] !== val) { el._c[prop] = val; el.style[prop] = val; } }
+  function txt(el, val) { if (el._t !== val) { el._t = val; el.textContent = val; } }
+
+  var cellEls = [], gridEl = $('grid');
+  for (var i = 0; i < ROWS * COLS; i++) { var c = document.createElement('div'); c.className = 'cell'; gridEl.appendChild(c); cellEls.push(c); }
+  var wallEls = [[], []], wallsEl = $('walls');
+  for (var side = 0; side < 2; side++) for (var k = 0; k < 10; k++) {
+    var s = document.createElement('div'); s.className = 'wallseg';
+    s.style.left = side ? '308px' : '0px'; s.style.top = (k * 60) + 'px';
+    wallsEl.appendChild(s); wallEls[side].push(s);
+  }
+  var nextEls = [], nextEl = $('next');
+  for (var n = 0; n < 16; n++) { var d = document.createElement('div'); nextEl.appendChild(d); nextEls.push(d); }
+  var dustEls = [], dustEl = $('dust');
+  for (var q = 0; q < 45; q++) { var dd = document.createElement('div'); dd.style.display = 'none'; dustEl.appendChild(dd); dustEls.push(dd); }
+  var traceEls = [], traceEl = $('trace');
+  for (var t = 0; t < 60; t++) { var b = document.createElement('div'); traceEl.appendChild(b); traceEls.push(b); }
+  if (CONFIG.researcher) $('research').hidden = false;
+  txt($('condLabel'), cues().on ? 'instability' : 'control');
+
+  function buildGames() {
+    var el = $('games'); el.innerHTML = '';
+    if (!games.length) { var e = document.createElement('div'); e.style.cssText = 'font-size:13px;color:var(--muted)'; e.textContent = 'None yet.'; el.appendChild(e); return; }
+    games.forEach(function (r) {
+      var box = document.createElement('div'); box.className = 'game';
+      var top = document.createElement('div'); top.className = 'mono'; top.style.cssText = 'display:flex;justify-content:space-between;font-size:14px';
+      var a = document.createElement('span'); a.textContent = fmtNum(r.score);
+      var b2 = document.createElement('span'); b2.style.color = 'var(--muted2)'; b2.textContent = r.cond;
+      top.appendChild(a); top.appendChild(b2);
+      var meta = document.createElement('div'); meta.className = 'mono'; meta.style.cssText = 'font-size:11px;color:var(--muted2)';
+      meta.textContent = fmtTime(r.time) + ' · ' + r.ending + ' · height ' + Math.round(r.peakH * 100) + '% · ' + r.lines + ' lines';
+      box.appendChild(top); box.appendChild(meta); el.appendChild(box);
+    });
+  }
+  function buildTopScores() {
+    var el = $('topScores'); el.innerHTML = '';
+    games.slice().sort(function (a, b) { return b.score - a.score; }).slice(0, 5).forEach(function (r, idx) {
+      var row = document.createElement('div'); row.style.color = r.id === g.recId ? EMBER : 'var(--text2)';
+      var a = document.createElement('span'); a.textContent = (idx + 1) + '.';
+      var b2 = document.createElement('span'); b2.textContent = fmtNum(r.score);
+      row.appendChild(a); row.appendChild(b2); el.appendChild(row);
+    });
+  }
+
+  // ---------- Draw ----------
+  function render() {
+    var cue = cues(), playing = g.phase === 'play' && !g.paused, teeter = g.phase === 'teeter';
+    var tremA = g.tremor ? g.tremor.amp * (1 - g.tremor.t / g.tremor.dur) : 0;
+
+    var pc = {}, ghost = {};
+    if (g.piece) {
+      var gp = g.piece, gy = gp.y;
+      while (!collides(gp.m, gp.x, gy + 1)) gy++;
+      for (var cy = 0; cy < gp.m.length; cy++) for (var cx = 0; cx < gp.m[cy].length; cx++) {
+        if (!gp.m[cy][cx]) continue;
+        pc[(gp.y + cy) * COLS + gp.x + cx] = true;
+        ghost[(gy + cy) * COLS + gp.x + cx] = true;
+      }
+    }
+    var fT = g.phase === 'falling' ? g.fallT / FALL_MS : (g.phase === 'over' ? 1 : 0);
+
+    for (var y = 0; y < ROWS; y++) for (var x = 0; x < COLS; x++) {
+      var i = y * COLS + x, c = g.grid[y][x];
+      var bg = 'transparent', sh = 'inset 0 0 0 1px rgba(255,255,255,0.035)', tf = 'none', op = '1';
+      if (pc[i]) {
+        bg = 'hsl(36, 14%, 92%)';
+        sh = 'inset 0 0 0 1px rgba(0,0,0,0.28), inset 0 -3px 0 rgba(0,0,0,0.12)';
+      } else if (c) {
+        var sv = g.S[y][x], s = cue.cracks ? sv : 0, L = LIGHT[c.k];
+        var col = 'hsl(' + (34 - 18 * s).toFixed(1) + ', ' + (6 + 70 * s).toFixed(1) + '%, ' + (L + (52 - L) * s).toFixed(1) + '%)';
+        var layers = [];
+        if (s > 0.38) layers.push('linear-gradient(' + Math.round(25 + c.seed * 130) + 'deg, transparent 46%, rgba(28,12,4,0.75) 47%, rgba(28,12,4,0.75) 53%, transparent 54%)');
+        if (s > 0.7) layers.push('linear-gradient(' + Math.round(100 + c.seed2 * 70) + 'deg, transparent 47%, rgba(28,12,4,0.6) 48%, rgba(28,12,4,0.6) 51%, transparent 52%)');
+        layers.push(col);
+        bg = layers.join(', ');
+        sh = 'inset 0 0 0 1px rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.14)';
+        var tx = 0, ty = 0, rot = 0;
+        if (cue.env) { ty += sv * 2.5; rot += (c.seed - 0.5) * sv * 7; tx += (c.seed2 - 0.5) * sv * 2; }
+        if (cue.tremble && sv > 0.45 && playing) { tx += rand(sv); ty += rand(sv * 0.6); }
+        if (tremA > 0) { tx += rand(tremA * 0.4); ty += rand(tremA * 0.25); }
+        if (teeter) {
+          if (s > 0.3) bg = 'hsl(16, ' + Math.round(55 + 20 * Math.random()) + '%, ' + Math.round(48 + 8 * Math.random()) + '%)';
+          tx += rand(1.2); ty += rand(0.8);
+        }
+        if (tx || ty || rot) tf = 'translate(' + tx.toFixed(2) + 'px, ' + ty.toFixed(2) + 'px) rotate(' + rot.toFixed(2) + 'deg)';
+        if (fT > 0) {
+          if (cue.on) {
+            var dist = fT * fT * (700 + c.seed * 500);
+            tf = 'translate(' + ((c.seed2 - 0.5) * 120 * fT).toFixed(1) + 'px, ' + dist.toFixed(1) + 'px) rotate(' + ((c.seed - 0.5) * 160 * fT).toFixed(1) + 'deg)';
+            op = (1 - fT * 0.6).toFixed(2);
+          } else op = (1 - fT).toFixed(2);
+        }
+      } else if (ghost[i] && g.phase === 'play') {
+        bg = 'rgba(236,232,225,0.05)';
+        sh = 'inset 0 0 0 1px rgba(236,232,225,0.32)';
+      }
+      var el = cellEls[i];
+      set(el, 'background', bg); set(el, 'boxShadow', sh); set(el, 'transform', tf); set(el, 'opacity', op);
+    }
+
+    for (var side = 0; side < 2; side++) for (var k = 0; k < 10; k++) {
+      var sd = ws[k + side * 10], ox = 0, rr = 0, crack = false;
+      if (cue.env) {
+        var amt = 0.6 + g.inst * 3;
+        ox = (sd.a - 0.5) * amt * 1.2 + (tremA > 0 ? rand(tremA * 0.5) : 0);
+        rr = (sd.b - 0.5) * amt * 1.4;
+        crack = sd.c < 0.15 + g.inst * 0.7;
+      }
+      var base = k % 2 ? '#2e2a25' : '#34302a';
+      var wel = wallEls[side][k];
+      set(wel, 'background', crack ? 'linear-gradient(' + Math.round(60 + sd.a * 60) + 'deg, transparent 44%, rgba(10,8,6,0.85) 45%, rgba(10,8,6,0.85) 55%, transparent 56%), ' + base : base);
+      set(wel, 'transform', 'translate(' + ox.toFixed(2) + 'px, 0px) rotate(' + rr.toFixed(2) + 'deg)');
+    }
+
+    for (var j = 0; j < dustEls.length; j++) {
+      var de = dustEls[j], dp = g.dust[j];
+      if (!dp) { set(de, 'display', 'none'); continue; }
+      set(de, 'display', 'block');
+      set(de, 'left', dp.x.toFixed(1) + 'px'); set(de, 'top', dp.y.toFixed(1) + 'px');
+      set(de, 'width', dp.s.toFixed(1) + 'px'); set(de, 'height', dp.s.toFixed(1) + 'px');
+      set(de, 'opacity', (0.75 * dp.life / dp.max).toFixed(2));
+    }
+
+    var nm = SHAPES[g.next] || SHAPES.T;
+    for (var ny = 0; ny < 4; ny++) for (var nx = 0; nx < 4; nx++) {
+      var my = ny - (nm.length === 4 ? 0 : 1), mxx = nx - (nm.length === 2 ? 1 : 0);
+      var on = my >= 0 && my < nm.length && mxx >= 0 && mxx < nm.length && nm[my][mxx];
+      set(nextEls[ny * 4 + nx], 'background', on && g.phase !== 'idle' ? 'hsl(34, 6%, ' + LIGHT[g.next] + '%)' : 'rgba(255,255,255,0.03)');
+    }
+
+    var mult = multFor(g.H);
+    set($('z4'), 'color', mult >= 4 ? EMBER : '#6b655c');
+    set($('z3'), 'color', mult >= 3 ? EMBER : '#6b655c');
+    set($('z2'), 'color', mult >= 2 ? EMBER : '#6b655c');
+
+    var glowA = cue.glow ? (0.26 * g.inst).toFixed(3) : '0';
+    set(gridEl, 'background', 'radial-gradient(ellipse at 50% 100%, rgba(224,102,47,' + glowA + '), transparent 72%), #1c1a17');
+    set($('well'), 'transform', 'translate(' + g.shx.toFixed(2) + 'px, ' + g.shy.toFixed(2) + 'px) rotate(' + g.lean.toFixed(3) + 'deg)');
+
+    var hudTf = 'none', fL = 'none', fM = 'none', fR = 'none', fGap = '0px', crackOp = '0';
+    if (cue.env) {
+      var hj = tremA > 0 ? tremA * 0.6 : 0;
+      hudTf = 'translate(' + rand(hj).toFixed(2) + 'px, ' + rand(hj * 0.5).toFixed(2) + 'px) rotate(' + (-0.8 - g.inst * 1.8 + rand(hj * 0.15)).toFixed(2) + 'deg)';
+      fGap = (2 + g.inst * 8).toFixed(1) + 'px';
+      fL = 'rotate(' + (-0.4 - g.inst * 2.2).toFixed(2) + 'deg)';
+      fM = 'translateY(' + (0.5 + g.inst * 3 + (tremA > 0 ? rand(tremA * 0.3) : 0)).toFixed(2) + 'px)';
+      fR = 'rotate(' + (0.5 + g.inst * 2.6).toFixed(2) + 'deg)';
+      crackOp = (0.3 + g.inst * 0.6).toFixed(2);
+    }
+    set($('hud'), 'transform', hudTf);
+    set($('floor'), 'gap', fGap);
+    set($('fL'), 'transform', fL); set($('fM'), 'transform', fM); set($('fR'), 'transform', fR);
+    set($('bgcracks'), 'opacity', crackOp);
+
+    txt($('time'), fmtTime(g.elapsed));
+    txt($('score'), fmtNum(g.score));
+    txt($('best'), 'Best ' + fmtNum(Math.max(best, g.score)));
+    txt($('level'), String(g.level));
+    txt($('lines'), String(g.lines));
+    txt($('mult'), '×' + mult);
+    set($('mult'), 'color', mult >= 3 ? EMBER : 'var(--text)');
+
+    var fl = $('flash');
+    if (g.flash) {
+      fl.hidden = false; txt(fl, g.flash.text);
+      set(fl, 'transform', 'translateY(' + (-g.flash.t / 25).toFixed(1) + 'px)');
+      set(fl, 'opacity', (1 - g.flash.t / FLASH_MS).toFixed(2));
+    } else fl.hidden = true;
+
+    var isIdle = g.phase === 'idle', pausedNow = g.phase === 'play' && g.paused;
+    $('paused').hidden = !(pausedNow && !helpOpen);
+    $('icPlay').hidden = !pausedNow; $('icPause').hidden = pausedNow;
+    $('guide').hidden = !(isIdle || helpOpen);
+    $('beginBtn').hidden = !isIdle;
+    $('resumeBtn').hidden = isIdle || !helpOpen;
+    $('closeX').hidden = isIdle || !helpOpen;
+
+    var overEl = $('over');
+    if (g.phase === 'over') {
+      if (!g.overBuilt) { g.overBuilt = true; buildTopScores(); txt($('finalScore'), fmtNum(g.score)); $('newBest').hidden = !g.newBest; }
+      overEl.hidden = false;
+    } else overEl.hidden = true;
+
+    if (CONFIG.researcher) {
+      txt($('instPct'), Math.round(g.inst * 100) + '%');
+      txt($('rHeight'), Math.round(g.H * 100) + '%');
+      txt($('rPeak'), Math.round(g.peakH * 100) + '%');
+      txt($('rTremors'), String(g.tremors));
+      txt($('rEnding'), g.ending || '—');
+      var tr = g.trace;
+      for (var tt = 0; tt < 60; tt++) {
+        var v = tt - (60 - tr.length) >= 0 ? tr[tt - (60 - tr.length)] : 0;
+        set(traceEls[tt], 'height', Math.round(2 + v * 76) + 'px');
+        set(traceEls[tt], 'background', v > 0.5 ? EMBER : '#6b655c');
+      }
+    }
+  }
+
+  // ---------- Game loop ----------
+  var last = Date.now();
+  function frame() {
+    var now = Date.now(), dt = Math.min(100, now - last); last = now;
+    var cue = cues(), running = g.phase === 'play' && !g.paused;
+    if (running) {
+      g.elapsed += dt; g.acc += dt;
+      var interval = Math.max(90, CONFIG.startSpeed * Math.pow(0.85, g.level - 1));
+      if (g.acc >= interval) { g.acc = 0; stepDown(); }
+      g.traceAcc += dt;
+      if (g.traceAcc >= 500) { g.traceAcc = 0; g.trace.push(g.inst); if (g.trace.length > 60) g.trace.shift(); }
+      if (cue.env && g.phase === 'play') {
+        if (g.tremor) { g.tremor.t += dt; if (g.tremor.t >= g.tremor.dur) g.tremor = null; }
+        else {
+          g.nextTremor -= dt;
+          if (g.nextTremor <= 0) {
+            g.tremor = { t: 0, dur: 450 + g.H * 650, amp: 1.2 + g.H * 5 };
+            g.tremors++;
+            g.nextTremor = Math.max(2500, 6000 + Math.random() * 8000 - g.H * 4000);
+            for (var b = 0; b < 4 + Math.round(g.H * 8); b++) spawnDust(true);
+          }
+        }
+      }
+    } else if (g.phase === 'teeter') {
+      g.teeterT += dt;
+      if (g.teeterT >= TEETER_MS) { g.ending = 'toppled'; endGame(); }
+    } else if (g.phase === 'falling') {
+      g.fallT += dt;
+      if (g.fallT >= FALL_MS) { g.phase = 'over'; g.dust = []; }
+    }
+    if (g.phase !== 'play') g.tremor = null;
+    var frozen = g.phase === 'play' && g.paused;
+
+    if (g.flash && !frozen) { g.flash.t += dt; if (g.flash.t >= FLASH_MS) g.flash = null; }
+
+    if (!frozen) {
+      if (cue.env && (running || g.phase === 'teeter')) {
+        var rate = Math.max(0, g.inst - 0.2) * 8 + (g.tremor ? 20 : 0) + (g.phase === 'teeter' ? 40 : 0);
+        g.dustAcc += rate * dt / 1000;
+        while (g.dustAcc >= 1) { g.dustAcc -= 1; if (g.dust.length < 45) spawnDust(false); }
+      }
+      if (g.dust.length) {
+        g.dust = g.dust.filter(function (d) { d.vy += 0.0012 * dt; d.y += d.vy * dt / 16; d.life -= dt; return d.life > 0 && d.y < 600; });
+      }
+    }
+
+    var target = 0;
+    if (cue.lean && (g.phase === 'play' || g.phase === 'teeter')) {
+      var Hs = clamp((g.H - 0.35) / 0.65);
+      target = Math.max(-5, Math.min(5, g.imb * g.H * 8)) + Math.sin(g.elapsed / 900) * Hs * 2.2;
+    }
+    if (cue.env && g.phase === 'play') target += Math.sin(g.elapsed / 1300) * 0.35;
+    if (g.phase === 'teeter') {
+      var tp = g.teeterT / TEETER_MS;
+      target = g.teeterDir * (2 + 14 * tp * tp) + Math.sin(g.teeterT / 70) * 1.5 * (1 - tp);
+    }
+    g.lean += (target - g.lean) * (g.phase === 'teeter' ? 0.2 : 0.08);
+    var amp = 0;
+    if (cue.tremble && running) amp = Math.max(0, g.inst - 0.3) / 0.7 * 3;
+    if (g.tremor) amp += g.tremor.amp * (1 - g.tremor.t / g.tremor.dur);
+    if (g.phase === 'teeter') amp = 3 + 3 * (g.teeterT / TEETER_MS);
+    g.shx = rand(amp); g.shy = rand(amp * 0.5);
+    render();
+  }
+
+  // ---------- Responsive: size the well + buttons to the screen ----------
+  function fit() {
+    var vw = window.innerWidth, vh = window.innerHeight, narrow = vw < 900;
+    var hudH = narrow ? $('hud').getBoundingClientRect().height + 12 : 0;
+    var availW = narrow ? Math.min(vw - 24, 560) : 520;
+    var availH = vh - (narrow ? 24 : 32) - hudH;
+    var s = Math.min(availW / 360, availH / 730);
+    s = Math.max(0.5, Math.min(s, 1.25));
+    $('colWrap').style.width = Math.round(360 * s) + 'px';
+    $('colWrap').style.height = Math.round(730 * s) + 'px';
+    $('col').style.transform = 'scale(' + s.toFixed(3) + ')';
+    if (!narrow) $('research').style.height = Math.round(730 * s) + 'px';
+  }
+  window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', function () { setTimeout(fit, 150); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+  fit();
+  render();
+  setInterval(frame, 40);
+})();
+</script>
+</body>
+</html>
